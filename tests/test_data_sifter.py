@@ -1,60 +1,74 @@
-from data_sifter import DataSifter, WebsiteData
 import pytest
+from data_sifter import DataSifter, Page
 
-def test_extract_data():
-    sifter = DataSifter()
-    url = "https://example.com"
-    html = "<html><body>Hello World!</body></html>"
-    data = sifter.extract_data(url, html)
-    assert isinstance(data, WebsiteData)
-    assert data.url == url
-    assert data.data == {'text': 'Hello World!'}
+def test_classify_product():
+    data_sifter = DataSifter()
+    page = Page(
+        url='https://example.com/product',
+        dom_structure={'types': ['product']},
+        microdata={'types': ['product']}
+    )
+    assert data_sifter.classify(page) == 'product'
 
-def test_add_website():
-    sifter = DataSifter()
-    url = "https://example.com"
-    html = "<html><body>Hello World!</body></html>"
-    sifter.add_website(url, html)
-    assert url in sifter.websites
+def test_classify_article():
+    data_sifter = DataSifter()
+    page = Page(
+        url='https://example.com/article',
+        dom_structure={'types': ['article']},
+        microdata={'types': ['article']}
+    )
+    assert data_sifter.classify(page) == 'article'
 
-def test_get_websites():
-    sifter = DataSifter()
-    url1 = "https://example1.com"
-    url2 = "https://example2.com"
-    html1 = "<html><body>Hello World!</body></html>"
-    html2 = "<html><body>Foo Bar!</body></html>"
-    sifter.add_website(url1, html1)
-    sifter.add_website(url2, html2)
-    websites = sifter.get_websites()
-    assert len(websites) == 2
+def test_classify_landing():
+    data_sifter = DataSifter()
+    page = Page(
+        url='https://example.com/landing',
+        dom_structure={'types': ['landing']},
+        microdata={'types': ['landing']}
+    )
+    assert data_sifter.classify(page) == 'landing'
 
-def test_get_website():
-    sifter = DataSifter()
-    url = "https://example.com"
-    html = "<html><body>Hello World!</body></html>"
-    sifter.add_website(url, html)
-    website = sifter.get_website(url)
-    assert website is not None
-    assert isinstance(website, WebsiteData)
+def test_classify_blog():
+    data_sifter = DataSifter()
+    page = Page(
+        url='https://example.com/blog',
+        dom_structure={'types': ['blog']},
+        microdata={'types': ['blog']}
+    )
+    assert data_sifter.classify(page) == 'blog'
 
-def test_supports_multiple_websites():
-    sifter = DataSifter()
-    url1 = "https://example1.com"
-    url2 = "https://example2.com"
-    html1 = "<html><body>Hello World!</body></html>"
-    html2 = "<html><body>Foo Bar!</body></html>"
-    sifter.add_website(url1, html1)
-    sifter.add_website(url2, html2)
-    assert sifter.supports_multiple_websites()
+def test_classify_profile():
+    data_sifter = DataSifter()
+    page = Page(
+        url='https://example.com/profile',
+        dom_structure={'types': ['profile']},
+        microdata={'types': ['profile']}
+    )
+    assert data_sifter.classify(page) == 'profile'
 
-def test_handles_different_data_formats():
-    sifter = DataSifter()
-    url = "https://example.com"
-    data = {'key': 'value'}
-    assert sifter.handles_different_data_formats(url, data)
+def test_classify_generic():
+    data_sifter = DataSifter()
+    page = Page(
+        url='https://example.com/generic',
+        dom_structure={'types': []},
+        microdata={'types': []}
+    )
+    assert data_sifter.classify(page) == 'generic'
 
-def test_handles_different_data_formats_failure():
-    sifter = DataSifter()
-    url = "https://example.com"
-    data = {'key': lambda x: x}
-    assert not sifter.handles_different_data_formats(url, data)
+def test_log_confidence_score_high():
+    data_sifter = DataSifter()
+    page = Page(
+        url='https://example.com/product',
+        dom_structure={'types': ['product']},
+        microdata={'types': ['product']}
+    )
+    data_sifter.log_confidence_score(page, 'product')
+
+def test_log_confidence_score_low():
+    data_sifter = DataSifter()
+    page = Page(
+        url='https://example.com/product',
+        dom_structure={'types': []},
+        microdata={'types': []}
+    )
+    data_sifter.log_confidence_score(page, 'product')

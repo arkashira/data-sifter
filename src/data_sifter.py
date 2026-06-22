@@ -1,45 +1,75 @@
 import json
 from dataclasses import dataclass
-from urllib.parse import urlsplit
-from html.parser import HTMLParser
+from urllib.parse import urlparse
+from collections import Counter
 
 @dataclass
-class WebsiteData:
+class Page:
     url: str
-    data: dict
+    dom_structure: dict
+    microdata: dict
 
 class DataSifter:
     def __init__(self):
-        self.websites = {}
+        self.heuristics = {
+            'product': self.is_product,
+            'article': self.is_article,
+            'landing': self.is_landing,
+            'blog': self.is_blog,
+            'profile': self.is_profile,
+            'generic': self.is_generic
+        }
 
-    def extract_data(self, url: str, html: str) -> WebsiteData:
-        class DataParser(HTMLParser):
-            def __init__(self):
-                super().__init__()
-                self.data = {}
+    def classify(self, page: Page):
+        scores = {}
+        for page_type, heuristic in self.heuristics.items():
+            scores[page_type] = heuristic(page)
+        return max(scores, key=scores.get)
 
-            def handle_data(self, data: str):
-                self.data['text'] = data
+    def is_product(self, page: Page):
+        return self.has_microdata(page, 'product') or self.has_dom_structure(page, 'product')
 
-        parser = DataParser()
-        parser.feed(html)
-        return WebsiteData(url, parser.data)
+    def is_article(self, page: Page):
+        return self.has_microdata(page, 'article') or self.has_dom_structure(page, 'article')
 
-    def add_website(self, url: str, html: str):
-        self.websites[url] = self.extract_data(url, html)
+    def is_landing(self, page: Page):
+        return self.has_microdata(page, 'landing') or self.has_dom_structure(page, 'landing')
 
-    def get_websites(self):
-        return list(self.websites.values())
+    def is_blog(self, page: Page):
+        return self.has_microdata(page, 'blog') or self.has_dom_structure(page, 'blog')
 
-    def get_website(self, url: str):
-        return self.websites.get(url)
+    def is_profile(self, page: Page):
+        return self.has_microdata(page, 'profile') or self.has_dom_structure(page, 'profile')
 
-    def supports_multiple_websites(self):
-        return len(self.websites) > 1
+    def is_generic(self, page: Page):
+        return True
 
-    def handles_different_data_formats(self, url: str, data: dict):
-        try:
-            json.dumps(data)
-            return True
-        except TypeError:
-            return False
+    def has_microdata(self, page: Page, page_type: str):
+        return page_type in page.microdata.get('types', [])
+
+    def has_dom_structure(self, page: Page, page_type: str):
+        return page_type in page.dom_structure.get('types', [])
+
+    def log_confidence_score(self, page: Page, page_type: str):
+        scores = {}
+        for heuristic in self.heuristics.values():
+            scores[heuristic.__name__] = heuristic(page)
+        confidence_score = sum(scores.values()) / len(scores)
+        if confidence_score >= 0.7:
+            print(f'Confidence score for {page_type}: {confidence_score:.2f}')
+        else:
+            print(f'Confidence score for {page_type} is low: {confidence_score:.2f}')
+
+def main():
+    data_sifter = DataSifter()
+    page = Page(
+        url='https://example.com/product',
+        dom_structure={'types': ['product']},
+        microdata={'types': ['product']}
+    )
+    page_type = data_sifter.classify(page)
+    data_sifter.log_confidence_score(page, page_type)
+    print(f'Classified as: {page_type}')
+
+if __name__ == '__main__':
+    main()
