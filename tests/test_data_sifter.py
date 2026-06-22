@@ -1,74 +1,27 @@
 import pytest
-from data_sifter import DataSifter, Page
+from data_sifter import Block, Connection, Workflow, validate_connections, save_workflow, load_workflow
 
-def test_classify_product():
-    data_sifter = DataSifter()
-    page = Page(
-        url='https://example.com/product',
-        dom_structure={'types': ['product']},
-        microdata={'types': ['product']}
-    )
-    assert data_sifter.classify(page) == 'product'
+def test_validate_connections():
+    blocks = [Block('Start URL', 1), Block('Selector', 2)]
+    connections = [Connection(1, 2)]
+    workflow = Workflow(blocks, connections)
+    assert validate_connections(workflow) == True
 
-def test_classify_article():
-    data_sifter = DataSifter()
-    page = Page(
-        url='https://example.com/article',
-        dom_structure={'types': ['article']},
-        microdata={'types': ['article']}
-    )
-    assert data_sifter.classify(page) == 'article'
+def test_validate_connections_invalid():
+    blocks = [Block('Start URL', 1), Block('Selector', 2)]
+    connections = [Connection(2, 1)]
+    workflow = Workflow(blocks, connections)
+    assert validate_connections(workflow) == False
 
-def test_classify_landing():
-    data_sifter = DataSifter()
-    page = Page(
-        url='https://example.com/landing',
-        dom_structure={'types': ['landing']},
-        microdata={'types': ['landing']}
-    )
-    assert data_sifter.classify(page) == 'landing'
+def test_save_workflow():
+    blocks = [Block('Start URL', 1), Block('Selector', 2)]
+    connections = [Connection(1, 2)]
+    workflow = Workflow(blocks, connections)
+    json_data = save_workflow(workflow)
+    assert json_data == '{"blocks": [{"type": "Start URL", "id": 1}, {"type": "Selector", "id": 2}], "connections": [{"from": 1, "to": 2}]}'
 
-def test_classify_blog():
-    data_sifter = DataSifter()
-    page = Page(
-        url='https://example.com/blog',
-        dom_structure={'types': ['blog']},
-        microdata={'types': ['blog']}
-    )
-    assert data_sifter.classify(page) == 'blog'
-
-def test_classify_profile():
-    data_sifter = DataSifter()
-    page = Page(
-        url='https://example.com/profile',
-        dom_structure={'types': ['profile']},
-        microdata={'types': ['profile']}
-    )
-    assert data_sifter.classify(page) == 'profile'
-
-def test_classify_generic():
-    data_sifter = DataSifter()
-    page = Page(
-        url='https://example.com/generic',
-        dom_structure={'types': []},
-        microdata={'types': []}
-    )
-    assert data_sifter.classify(page) == 'generic'
-
-def test_log_confidence_score_high():
-    data_sifter = DataSifter()
-    page = Page(
-        url='https://example.com/product',
-        dom_structure={'types': ['product']},
-        microdata={'types': ['product']}
-    )
-    data_sifter.log_confidence_score(page, 'product')
-
-def test_log_confidence_score_low():
-    data_sifter = DataSifter()
-    page = Page(
-        url='https://example.com/product',
-        dom_structure={'types': []},
-        microdata={'types': []}
-    )
-    data_sifter.log_confidence_score(page, 'product')
+def test_load_workflow():
+    json_data = '{"blocks": [{"type": "Start URL", "id": 1}, {"type": "Selector", "id": 2}], "connections": [{"from": 1, "to": 2}]}'
+    workflow = load_workflow(json_data)
+    assert len(workflow.blocks) == 2
+    assert len(workflow.connections) == 1
