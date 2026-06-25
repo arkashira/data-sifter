@@ -1,44 +1,48 @@
 import json
 from dataclasses import dataclass
-from typing import List
+from urllib.parse import urljoin
+from html.parser import HTMLParser
 
 @dataclass
-class Block:
-    type: str
-    id: int
+class ExtractedData:
+    url: str
+    data: dict
 
-@dataclass
-class Connection:
-    from_block: int
-    to_block: int
+class WebScrapingEngine:
+    def __init__(self, url):
+        self.url = url
+        self.data = {}
 
-@dataclass
-class Workflow:
-    blocks: List[Block]
-    connections: List[Connection]
+    def extract_data(self, html):
+        parser = HTMLParser()
+        parser.handle_starttag = self.handle_starttag
+        parser.handle_endtag = self.handle_endtag
+        parser.handle_data = self.handle_data
+        parser.feed(html)
+        return ExtractedData(self.url, self.data)
 
-def validate_connections(workflow: Workflow) -> bool:
-    """Validate connections between blocks"""
-    for connection in workflow.connections:
-        from_block = next((block for block in workflow.blocks if block.id == connection.from_block), None)
-        to_block = next((block for block in workflow.blocks if block.id == connection.to_block), None)
-        if from_block is None or to_block is None:
-            return False
-        if from_block.type == 'Selector' and connection.from_block != connection.to_block - 1:
-            return False
-    return True
+    def handle_starttag(self, tag, attrs):
+        if tag == 'a':
+            for attr in attrs:
+                if attr[0] == 'href':
+                    self.data['links'] = self.data.get('links', []) + [attr[1]]
 
-def save_workflow(workflow: Workflow) -> str:
-    """Save workflow to JSON"""
-    data = {
-        'blocks': [{'type': block.type, 'id': block.id} for block in workflow.blocks],
-        'connections': [{'from': connection.from_block, 'to': connection.to_block} for connection in workflow.connections]
-    }
-    return json.dumps(data)
+    def handle_endtag(self, tag):
+        pass
 
-def load_workflow(json_data: str) -> Workflow:
-    """Load workflow from JSON"""
-    data = json.loads(json_data)
-    blocks = [Block(block['type'], block['id']) for block in data['blocks']]
-    connections = [Connection(connection['from'], connection['to']) for connection in data['connections']]
-    return Workflow(blocks, connections)
+    def handle_data(self, data):
+        self.data['text'] = self.data.get('text', '') + data
+
+def get_html(url):
+    # Simulate getting HTML from a URL
+    return '<html><body><a href="https://example.com">Example</a></body></html>'
+
+def main():
+    url = 'https://example.com'
+    engine = WebScrapingEngine(url)
+    html = get_html(url)
+    extracted_data = engine.extract_data(html)
+    print(json.dumps(extracted_data.__dict__))
+
+if __name__ == '__main__':
+    main()
